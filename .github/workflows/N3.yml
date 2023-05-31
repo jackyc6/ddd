@@ -86,10 +86,6 @@ jobs:
         chmod +x $DIY_P2_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P2_SH
-        rm -rf package/feeds/luci/luci-theme-argon
-        rm -rf package/feeds/kenzo/luci-app-passwall 
-        rm -rf package/feeds/kenzo/luci-app-vssr 
-        rm -rf package/feeds/kenzo/luci-app-argon-config 
         rm -rf package/feeds/kenzo/luci-theme-argon_new
 
     - name: SSH connection to Actions
