@@ -1,0 +1,151 @@
+一、编译(友情提示，附件有编译好的固件和插件)
+使用的源码：https://github.com/coolsnowwolf/lede https://github.com/Lienol/openwrt ; 使用的feeds：https://github.com/kenzok8/openwrt-packages
+
+1. win/mac 下载VWmare, 下载https://releases.ubuntu.com/20.0 ... ve-server-amd64.iso ，
+2. VWware 加载Ubuntu20 镜像，注意分配50G磁盘，分配尽可能多的ram和cpu核心，我的mac 16G，8核，分配了5G 6核
+    2.1 更新os组件，分别执行下面三行命令：
+    sudo apt update -y
+    sudo apt full-upgrade -y
+    sudo apt install -y ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 ccache cmake cpio curl device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev  libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool lrzsz  mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python2.7 python3 python3-pip libpython3-dev qemu-utils  rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev
+
+3. 拉取lede git repo：
+    登录虚机，注意不要使用git、root用户。
+    执行： git clone https://github.com/coolsnowwolf/lede.git && cd lede
+    3.1 查看稳定版本号：(可省略)
+    https://github.com/coolsnowwolf/lede/tags ，比如最新版本为20220716,
+    执行git check out 20220716
+    3.2 默认没有“师夷长技以制夷”插件，所以加第三方feeds
+       执行
+       sed -i '$a src-git kenzo https://github.com/kenzok8/openwrt-packages' feeds.conf.default
+       sed -i '$a src-git small https://github.com/kenzok8/small' feeds.conf.default
+
+
+4. 更新并安装feeds
+执行：
+./scripts/feeds update -a
+./scripts/feeds install -a
+
+
+5 执行 make menuconfig, 开始K3固件配置
+   5.1 Target System (Broadcom BCM47xx/53xx (ARM))
+   5.2 Target Profile (PHICOMM K3)
+   5.3 ipv6: Extra packages -> ipv6helper
+   5.4 USB 自动挂载： ref：https://www.right.com.cn/forum/thread-541368-1-1.html
+        USB挂载：
+Base system -->block-mount/blockd,
+
+USB驱动支持：
+Kernel modules --> USB Support -->kmod-usb2/kmod-usb3
+Kernel modules --> USB Support -->kmod-usb-core/kmod-usb-storage/kmod-usb-storage-extra/kmod-usb-storage-uas
+
+文件系统支持：
+Kernel modules --> Filesystem -->kmod-fs-ext4/kmod-fs-msdos/kmod-fs-nfs/kmod-fs-ntfs
+
+其它：
+Utilities-->Disc-->cfdisk/hd-idle/hd-param
+
+
+   5.5 插件选择（每个人按照自身需求选择，以下是我的选择）
+       LuCI -> applications
+             luci-app-aliyundrive-webdav  -  阿里云盘（使用方法：安装好后，在路由器页面打开阿里云webdav，双击refresh token，app可以扫码获取）
+             luci-app-arpbind  - client和IP可以绑定
+             luci-app-filetransfer - 可以在网页上传并安装ipk插件
+             luci-app-frpc - 内网穿肉
+             luci-app-guest-wifi - 访客网络
+             luci-app-“师夷长技以制夷” - 大家都懂，不喜欢clash，clash太重了
+             luci-app-rclone - 网盘挂载，不需要选web，webUI都没用
+             luci-app-samba - 局域网共享，可以将挂载的网盘共享了
+             luci-app-serverchan - 路由器状态微信通知：谁连了我家网
+             luci-app-unblockmusic - 选择golang version，解锁音乐技能
+             luci-app-vlmcsd - 激活ms全家桶
+             luci-app-vsftpd - ftp协议局域网共享
+             luci-app-wrtbwmon - 实时监控连接者网络流量
+             luci-app-zerotier - 不需要公网ip，域名就可以实现内网穿透
+             按照个人喜好选择这些插件，save到默认的.confg文件
+   5.6 更换无限驱动（可省略）
+       https://github.com/Hill-98/phicommk3-firmware
+    我使用的是brcmfmac4366c-pcie.bin.69027，下载下来改名为brcmfmac4366c-pcie.bin, 替换package/lean/k3-brcmfmac4366c-firmware/files/lib/firmware/brcm/brcmfmac4366c-pcie.bin
+   5.7 修改lan口默认ip（可省略）
+       执行 vi package/base-files/files/bin/config_generate
+       按一下键盘的/, 输入192.168.1.1回车, 找到这一行： lan) ipad=${ipaddr:-"192.168.1.1"}
+       输入i，进入编辑模式，将lan口ip改掉，防止与wan口冲突
+   5.8 修改默认主题（可省略）
+       执行 vi feeds/luci/collections/luci/Makefile
+       将+uhttpd +uhttpd-mod-ubus +luci-mod-admin-full +luci-theme-bootstrap \  改成自己选定的主题名，比如我选择的主题是luci-theme-neobird
+          +uhttpd +uhttpd-mod-ubus +luci-mod-admin-full +luci-theme-neobird \
+   5.9 K3屏幕，，新版本的openwrt没有可用的K3screen插件，建议的请使用老版本的openwrt编译，具体哪个版本未做测试。
+       在新版本不要使用旧的k3screen插件，会因为不匹配，导致屏幕常亮假死。默认使用lede仓库自带的就好，可自动息屏，无天气。
+
+
+6. 第一次编译，大概需要4小时
+make download -j8 && make V=s -j1
+编译好之后，在bin/targets/bcm53xx/generic/openwrt-bcm53xx-generic-phicomm_k3-squashfs.trx 找到包。
+
+
+7. 有时候我们需要更换luci的组件，10几分钟
+
+make menuconfig
+make $(nproc)
+
+
+8. feeds有更新
+./scripts/feeds update -a
+./scripts/feeds install -a
+make menuconfig
+make $(nproc)
+9. 重新配置，重新编译
+rm -rf ./tmp  && rm -rf .config
+make menuconfig
+make V=s -j$(nproc)
+
+二、挂载并共享网盘
+谷歌无限容量网盘 ref: https://www.right.com.cn/forum/f ... wthread&tid=8226828
+
+1. ssh登录到你的openwrt机器上，
+2. 执行 rclone config, 挂载谷歌请参考上面的link，挂载ali网盘，请先将ali webdav在路由器页面配置好，比如配置好的webdav的端口号是5658.
+    2.1 输入n，选择新建一个挂载点
+3. 输入name： ali
+4. 接着输入Webdav对应的编号，我这里是41
+5. 输入我们再路由器页面配置的webdav的链接：http://路由器ip:5658
+6. 挂载磁盘
+    [ ! -d "/root/ali" ]  && mkdir /root/ali
+    nohup /usr/bin/rclone mount ali:/ /root/ali --copy-links --no-gzip-encoding --no-check-certificate --allow-other --allow-non-empty --umask 000 --cache-dir /tmp --vfs-cache-mode writes  > /dev/null 2>&1 &
+7. cd /root/ali, ls查看一下网盘的东西是否可以访问。
+8. Samba 上共享/root/ali这个目录即可。
+
+
+重复执行2-8，将google网盘挂载到/root/GoogleDrive目录上。
+
+以上配置跑一次即可。
+
+配置好了，接下来就是挂载网盘到openwrt系统目录，share一下我的命令：
+
+mkdir /root/ali
+mkdir /root/GoogleDrive
+nohup /usr/bin/rclone --config /root/.config/rclone/rclone.conf mount ali:/ /root/ali --copy-links --no-gzip-encoding --no-check-certificate --allow-other --allow-non-empty --umask 000 --cache-dir /tmp --vfs-cache-mode writes  > /dev/null 2>&1 &
+nohup /usr/bin/rclone --config /root/.config/rclone/rclone.conf mount k3:bidong-n1 /root/GoogleDrive --copy-links --no-gzip-encoding --no-check-certificate --allow-other --allow-non-empty --umask 000 > /dev/null 2>&1 &
+
+将nohup两条命令放到，系统-启动项 exit 0 之前。实现自动加载.
+
+补充一下，无线电功率修改是无效的，默认31dbm，太大了，效果反而不好。在exit 0之前，添加下面的代码，强制使用20dbm，亲测效果更好哦。
+
+
+/usr/sbin/iw dev wlan0 set txpower fixed 2000
+/usr/sbin/iw dev wlan1 set txpower fixed 2000
+
+三、分享一下我编译好的openwrt固件。
+无限驱动brcmfmac4366c-pcie.bin.69027 ， 据说更稳定，更好用
+
+
+192.168.3.1 root/password
+
+
+无线网配置，2.4G和5G都选择20dbm无线电功率，5G信道选择157
+
+四、担心自己制作的固件刷成砖？
+ref： https://www.right.com.cn/forum/thread-4122202-1-1.html
+只要能进cfe，就没有砖。cfe配合stfp可以刷官改tb，官root版本。官改tb可以刷openwrt的过渡版，然后刷openwrt新版本。
+按教程，将ip固定192.168.2.100，捅K3菊花不放手，接上电源，打开浏览器不停刷新 192.168.2.1，不要等10秒才刷新，得一直不停刷新
+
+
+获取并使用运营商分配的公网ipv6，并穿透给内网设备 https://www.right.com.cn/forum/f ... ypeid%26typeid%3D15
